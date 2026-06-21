@@ -143,44 +143,39 @@ def shap_bars(shap_dict: dict, top_n: int = 8):
     items = sorted(shap_dict.items(), key=lambda x: abs(x[1]), reverse=True)[:top_n]
     max_v = max(abs(v) for _, v in items) or 1
 
-    rows = ""
+    header = st.columns([3, 6, 1])
+    header[0].markdown('<p style="font-size:10px;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin:0;text-align:right;">Variável</p>', unsafe_allow_html=True)
+    header[1].markdown('<p style="font-size:10px;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin:0;text-align:center;">← reduz risco &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; aumenta risco →</p>', unsafe_allow_html=True)
+    header[2].markdown('<p style="font-size:10px;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin:0;text-align:right;">SHAP</p>', unsafe_allow_html=True)
+    st.markdown('<hr style="border:none;border-top:1px solid #F1F3F7;margin:4px 0 8px;">', unsafe_allow_html=True)
+
     for feat, val in items:
-        nome = FEATURE_NAMES_PT.get(feat, feat)
-        pct  = abs(val) / max_v * 46
+        nome  = FEATURE_NAMES_PT.get(feat, feat)
+        pct   = abs(val) / max_v
         color = "#EF4444" if val > 0 else "#10B981"
-        sig   = f"+{val:.3f}" if val > 0 else f"{val:.3f}"
-        if val > 0:
-            bar = f'<div style="position:absolute;left:50%;width:{pct:.1f}%;height:6px;background:{color};border-radius:0 3px 3px 0;opacity:0.8;"></div>'
-        else:
-            bar = f'<div style="position:absolute;right:50%;width:{pct:.1f}%;height:6px;background:{color};border-radius:3px 0 0 3px;opacity:0.8;"></div>'
+        sig   = ("+" if val > 0 else "") + f"{val:.3f}"
+        bar_left  = "50%" if val > 0 else (str(round(50 - pct * 46, 1)) + "%")
+        bar_width = str(round(pct * 46, 1)) + "%"
 
-        rows += f"""
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">
-          <span style="width:170px;font-size:12px;color:#4B5563;text-align:right;
-                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{nome}</span>
-          <div style="flex:1;height:6px;background:#F1F3F7;border-radius:3px;position:relative;">
-            {bar}
-            <div style="position:absolute;left:50%;width:1px;height:10px;top:-2px;background:#DDE1E9;"></div>
-          </div>
-          <span style="width:48px;font-size:12px;color:{color};font-weight:600;
-                       font-family:monospace;text-align:right;">{sig}</span>
-        </div>"""
-
-    st.markdown(f"""
-    <div style="background:#FFFFFF;border:1px solid #E8ECF0;border-radius:12px;
-                padding:20px 24px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-      <div style="display:flex;justify-content:space-between;margin-bottom:14px;
-                  padding-bottom:10px;border-bottom:1px solid #F1F3F7;">
-        <span style="font-size:10px;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;">Variável</span>
-        <span style="font-size:10px;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;">Impacto SHAP</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;
-                  color:#D1D5DB;margin-bottom:12px;padding-left:180px;">
-        <span>← reduz risco</span><span>aumenta risco →</span>
-      </div>
-      {rows}
-    </div>
-    """, unsafe_allow_html=True)
+        col_label, col_bar, col_val = st.columns([3, 6, 1])
+        col_label.markdown(
+            "<p style='font-size:12px;color:#4B5563;text-align:right;margin:4px 0;"
+            "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>" + nome + "</p>",
+            unsafe_allow_html=True,
+        )
+        bar_html = (
+            "<div style='position:relative;height:20px;display:flex;align-items:center;'>"
+            "<div style='position:absolute;left:0;right:0;height:5px;background:#F1F3F7;border-radius:3px;'></div>"
+            "<div style='position:absolute;left:50%;width:1px;height:12px;background:#DDE1E9;top:4px;'></div>"
+            "<div style='position:absolute;left:" + bar_left + ";width:" + bar_width + ";height:5px;background:" + color + ";border-radius:3px;opacity:0.85;'></div>"
+            "</div>"
+        )
+        col_bar.markdown(bar_html, unsafe_allow_html=True)
+        col_val.markdown(
+            "<p style='font-size:12px;font-weight:600;color:" + color + ";"
+            "font-family:monospace;text-align:right;margin:4px 0;'>" + sig + "</p>",
+            unsafe_allow_html=True,
+        )
 
 
 def section_label(eyebrow: str, title: str):
