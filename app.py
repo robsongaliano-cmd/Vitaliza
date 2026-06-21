@@ -14,7 +14,101 @@ import pandas as pd
 import shap
 import streamlit as st
 
-from llm_explainer import FEATURE_NAMES_PT, explain, get_segment, SEGMENTS
+from llm_explainer import FEATURE_NAMES_PT, explain
+
+# ── Segmentos — duplicados aqui para evitar falha de importação circular ──────
+SEGMENTS = {
+    "Early Dropper": {
+        "descricao": "cliente no 1º mês, ainda não criou hábito (61,4% churn · LTV/CAC 1,40)",
+        "driver": "Onboarding insuficiente — não percebe valor antes da 1ª cobrança",
+        "hipotese": "CONFIRMADA no dataset",
+        "ltv_cac": "1,40 — abaixo do break-even; prioridade é criar hábito, não desconto",
+        "nao_intervir": False,
+        "modelo_nota": "Recall elevado para este segmento é prioritário — volume alto (33% da base); FP gera custo de campanha desnecessário mas FN perde cliente que saiu sem clicar em cancelar.",
+    },
+    "Disengaged": {
+        "descricao": "queda de freq >0,5/sem em relação à média — 76,2% churn · LTV/CAC 0,22",
+        "driver": "Deterioração detectável antes do cancelamento (hipótese H3 Marcelo — CONFIRMADA)",
+        "hipotese": "CONFIRMADA — delta de frequência é o sinal preditivo mais forte",
+        "ltv_cac": "0,22 — custo de reter pode superar o valor; avaliar custo vs. benefício",
+        "nao_intervir": False,
+        "modelo_nota": "Threshold 70 prioriza precisão para evitar FP que acione Sleeping Dogs erroneamente; FN tem custo alto pois churn é 76,2%.",
+    },
+    "Monthly at Risk": {
+        "descricao": "contrato mensal sem fidelidade — 8,8% churn · LTV/CAC 13,59",
+        "driver": "Baixo comprometimento contratual — cada renovação é uma nova decisão",
+        "hipotese": "CONFIRMADA — H1: contratos mensais têm 42,3% churn vs 2,4% anuais",
+        "ltv_cac": "13,59 — maior retorno potencial da base; conversão para anual multiplica o LTV",
+        "nao_intervir": False,
+        "modelo_nota": "Maior ROI de retenção — precisão elevada importa para não desperdiçar oferta em quem já renovaria; recall secundário pois churn base é 8,8%.",
+    },
+    "Loyal Emerging": {
+        "descricao": "em transição para engajamento pleno — 1,7% churn · LTV/CAC crescente",
+        "driver": "Hábito em formação — empurrão social pode consolidar",
+        "hipotese": "HIPÓTESE — sem evidência confirmatória suficiente",
+        "ltv_cac": "crescente — objetivo é migrar para Loyal Engaged, não apenas reter",
+        "nao_intervir": False,
+        "modelo_nota": "Risco de FP alto se tratado como cliente em churn — modelo deve ser calibrado para não classificar Loyal Emerging como alto risco.",
+    },
+    "Loyal Engaged": {
+        "descricao": "profundamente engajado — 0,0% churn · LTV/CAC 70+",
+        "driver": "Hábito consolidado e vínculo social forte — LTV benchmark da plataforma",
+        "hipotese": "N/A",
+        "ltv_cac": "70+ — proteger o ciclo, não interromper",
+        "nao_intervir": False,
+        "modelo_nota": "Score baixo esperado — qualquer score alto é sinal de erro do modelo ou mudança de comportamento recente.",
+    },
+    "Socially Protected": {
+        "descricao": "protegido por vínculos sociais — 0,8% churn",
+        "driver": "Custo social de sair é alto — H2 CONFIRMADA: vínculos reduzem churn de 33% → 10,7%",
+        "hipotese": "CONFIRMADA — H2",
+        "ltv_cac": "alto — intervenção deve ser coletiva, não individual",
+        "nao_intervir": False,
+        "modelo_nota": "FP é o risco principal — acionar individualmente pode romper o vínculo social que o retém.",
+    },
+    "Sleeping Dog": {
+        "descricao": "ativo por inércia — lifetime >6m + freq <0,5/sem — 1,9% churn · R$153k ARR passivo",
+        "driver": "Pagamento por inércia — qualquer contato pode virar lembrete de cancelar",
+        "hipotese": "CASE EXPLÍCITO — 'don't wake the sleeping dogs'",
+        "ltv_cac": "passivo — R$153k ARR em risco de ser destruído por qualquer notificação",
+        "nao_intervir": True,
+        "modelo_nota": "FP SISTEMÁTICO do modelo — Sleeping Dogs têm score alto mas NÃO devem ser acionados. Flag sleeping_dog_flag deve excluí-los ANTES do disparo, independente do score.",
+    },
+    "Em Risco Moderado": {
+        "descricao": "sinais mistos — necessita atenção preventiva",
+        "driver": "Combinação de fatores sem padrão dominante claro",
+        "hipotese": "EM AVALIAÇÃO",
+        "ltv_cac": "variável — depende do contrato",
+        "nao_intervir": False,
+        "modelo_nota": "Score moderado (30–65%) — avaliar custo de intervenção vs. probabilidade de churn antes de acionar CS.",
+    },
+}
+
+
+def get_segment(client_data: dict, shap_values: dict, churn_prob: float) -> str:
+    """Classifica o cliente no segmento do Board Recommendation Deck."""
+    lifetime     = client_data.get("Lifetime", 0)
+    freq_atual   = client_data.get("Avg_class_frequency_current_month", 0)
+    freq_total   = client_data.get("Avg_class_frequency_total", 0)
+    contract     = client_data.get("Contract_period", 1)
+    group_visits = client_data.get("Group_visits", 0)
+    promo        = client_data.get("Promo_friends", 0)
+    freq_delta   = freq_total - freq_atual
+
+    if lifetime > 6 and freq_atual < 0.5:
+        return "Sleeping Dog"
+    elif freq_delta > 0.5 and lifetime > 1:
+        return "Disengaged"
+    elif lifetime <= 1:
+        return "Early Dropper"
+    elif contract == 1 and lifetime >= 2:
+        return "Monthly at Risk"
+    elif (group_visits == 1 or promo == 1) and freq_atual >= 1.0:
+        return "Socially Protected"
+    elif freq_atual >= 1.5 and lifetime >= 3 and churn_prob < 0.20:
+        return "Loyal Engaged" if freq_atual >= 2.5 else "Loyal Emerging"
+    else:
+        return "Em Risco Moderado"
 
 # ── Página ────────────────────────────────────────────────────────────────────
 st.set_page_config(

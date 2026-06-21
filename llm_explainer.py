@@ -21,7 +21,6 @@ Configuração:
 import os
 import json
 from typing import Optional
-from openai import OpenAI
 
 # ── Nomes em português ────────────────────────────────────────────────────────
 FEATURE_NAMES_PT = {
@@ -402,6 +401,8 @@ def explain(
     Returns:
         String com o briefing estruturado + mensagem pronta + nota para o operador
     """
+    from openai import OpenAI  # import local — evita falha no nível do módulo
+
     key = api_key or os.environ.get("OPENROUTER_API_KEY")
     if not key:
         raise ValueError(
