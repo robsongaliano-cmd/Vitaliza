@@ -95,9 +95,52 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 }
 
 /* Cabeçalhos */
-h1 { font-size: 22px !important; font-weight: 600 !important; color: #1A1D23 !important; }
-h2 { font-size: 16px !important; font-weight: 600 !important; color: #1A1D23 !important; }
+h1 { font-size: 32px !important; font-weight: 700 !important; color: #1A1D23 !important; letter-spacing: -0.5px !important; }
+h2 { font-size: 18px !important; font-weight: 600 !important; color: #1A1D23 !important; }
 h3 { font-size: 14px !important; font-weight: 600 !important; color: #1A1D23 !important; }
+
+/* Selectbox */
+[data-testid="stSelectbox"] > div > div {
+    border: 1px solid #DDE1E9 !important;
+    border-radius: 7px !important;
+    font-size: 13px !important;
+    background: #FAFBFC !important;
+}
+
+/* Slider — cor do thumb e track */
+[data-testid="stSlider"] [data-baseweb="slider"] [role="slider"] {
+    background: #1A1D23 !important;
+    border-color: #1A1D23 !important;
+}
+[data-testid="stSlider"] [data-baseweb="slider"] div[class*="Track"] div:first-child {
+    background: #1A1D23 !important;
+}
+[data-testid="stSlider"] [class*="sliderThumb"] {
+    background: #1A1D23 !important;
+}
+
+/* Form card */
+[data-testid="stForm"] {
+    background: #FFFFFF !important;
+    border: 1px solid #E8ECF0 !important;
+    border-radius: 14px !important;
+    padding: 8px 4px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+}
+
+/* Label dos inputs */
+[data-testid="stForm"] label {
+    font-size: 12px !important;
+    color: #4B5563 !important;
+    font-weight: 500 !important;
+}
+
+/* Slider value color */
+[data-testid="stSlider"] [data-testid="stMarkdownContainer"] p {
+    color: #1A1D23 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
 
 /* Upload */
 [data-testid="stFileUploader"] {
@@ -284,8 +327,17 @@ with st.sidebar:
 # ─────────────────────────────────────────────────────────────────────────────
 if tab_mode == "🔍 Análise individual":
 
-    st.title("Análise de cliente")
-    st.caption("Preencha os dados e obtenha o score de churn, os fatores de risco e a recomendação de ação.")
+    st.markdown("""
+    <div style="margin-bottom:24px;">
+      <p style="font-size:11px;color:#9CA3AF;font-weight:600;letter-spacing:0.12em;
+                text-transform:uppercase;margin:0 0 6px;">CHURN INTELLIGENCE · ANÁLISE INDIVIDUAL</p>
+      <h1 style="font-size:34px;font-weight:700;color:#1A1D23;letter-spacing:-0.8px;
+                 line-height:1.1;margin:0 0 8px;">Análise de cliente</h1>
+      <p style="font-size:13px;color:#6B7385;margin:0;">
+        Preencha os dados e obtenha o score de churn, os fatores de risco e o briefing de recomendação.
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.form("client_form"):
         col1, col2, col3 = st.columns(3)
@@ -371,8 +423,17 @@ if tab_mode == "🔍 Análise individual":
 # ─────────────────────────────────────────────────────────────────────────────
 elif tab_mode == "📂 Análise em lote":
 
-    st.title("Análise em lote")
-    st.caption("Faça upload do CSV de clientes e veja os scores de churn de toda a base.")
+    st.markdown("""
+    <div style="margin-bottom:24px;">
+      <p style="font-size:11px;color:#9CA3AF;font-weight:600;letter-spacing:0.12em;
+                text-transform:uppercase;margin:0 0 6px;">CHURN INTELLIGENCE · ANÁLISE EM LOTE</p>
+      <h1 style="font-size:34px;font-weight:700;color:#1A1D23;letter-spacing:-0.8px;
+                 line-height:1.1;margin:0 0 8px;">Análise em lote</h1>
+      <p style="font-size:13px;color:#6B7385;margin:0;">
+        Faça upload do CSV e veja os scores de churn de toda a base com briefings personalizados.
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
 
     uploaded = st.file_uploader("Selecione o CSV de clientes", type=["csv"])
 
@@ -441,8 +502,17 @@ elif tab_mode == "📂 Análise em lote":
 # ─────────────────────────────────────────────────────────────────────────────
 elif tab_mode == "📊 Métricas do modelo":
 
-    st.title("Validação do modelo")
-    st.caption("Random Forest · 200 árvores · class_weight=balanced · split 80/20 estratificado")
+    st.markdown("""
+    <div style="margin-bottom:24px;">
+      <p style="font-size:11px;color:#9CA3AF;font-weight:600;letter-spacing:0.12em;
+                text-transform:uppercase;margin:0 0 6px;">CHURN INTELLIGENCE · MÉTRICAS</p>
+      <h1 style="font-size:34px;font-weight:700;color:#1A1D23;letter-spacing:-0.8px;
+                 line-height:1.1;margin:0 0 8px;">Validação do modelo</h1>
+      <p style="font-size:13px;color:#6B7385;margin:0;">
+        Random Forest · 200 árvores · class_weight=balanced · split 80/20 estratificado
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
 
     if not metrics:
         st.error("metrics.json não encontrado. Execute train.py primeiro.")
