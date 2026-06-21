@@ -547,13 +547,14 @@ elif tab_mode == "📊 Métricas do modelo":
         )
 
         bar_html = (
-            "<div style='position:relative;height:28px;display:flex;align-items:center;'>"
+            "<div style='margin-bottom:2px;'>"
+            "<div style='position:relative;height:8px;'>"
             "<div style='position:absolute;left:0;right:0;height:8px;background:#F1F3F7;"
             "border-radius:4px;'></div>"
             "<div style='position:absolute;left:0;width:" + bar_width + ";height:8px;"
             "background:" + color + ";border-radius:4px;opacity:0.85;'></div>"
-            "<div style='position:absolute;left:" + bar_width + ";transform:translateX(6px);"
-            "font-size:10px;color:#9CA3AF;white-space:nowrap;'>" + descricao + "</div>"
+            "</div>"
+            "<p style='font-size:10px;color:#9CA3AF;margin:3px 0 0;'>" + descricao + "</p>"
             "</div>"
         )
         col_bar.markdown(bar_html, unsafe_allow_html=True)
