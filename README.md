@@ -43,12 +43,12 @@ Isso gera `churn_model.joblib` e `metrics.json`.
 ### 2. Configurar a chave da API
 
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENROUTER_API_KEY="sk-or-..."
 ```
 
 Ou crie o arquivo `.streamlit/secrets.toml`:
 ```toml
-ANTHROPIC_API_KEY = "sk-ant-..."
+OPENROUTER_API_KEY = "sk-or-..."
 ```
 
 ### 3. Rodar a interface web
@@ -76,7 +76,7 @@ Acesse em: http://localhost:8501
 1. Faça upload do projeto para um repositório GitHub
 2. Acesse [share.streamlit.io](https://share.streamlit.io)
 3. Conecte o repositório e selecione `app.py` como arquivo principal
-4. Em **Secrets**, adicione: `ANTHROPIC_API_KEY = "sua-chave"`
+4. Em **Secrets**, adicione: `OPENROUTER_API_KEY = "sua-chave"`
 5. Clique em **Deploy** — o link público é gerado em minutos
 
 ---

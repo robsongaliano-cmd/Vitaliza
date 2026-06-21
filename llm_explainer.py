@@ -2,18 +2,17 @@
 llm_explainer.py — Explicabilidade e análise prescritiva via LLM
 Vitaliza | Artefato 2 — Módulo 2 Inteli MBA IA & Dados
 
-Usa a API da Anthropic (claude-sonnet-4-6) para transformar os SHAP values
-de um cliente em explicação em linguagem natural + recomendação de ação.
+Usa o OpenRouter (compatível com API OpenAI) para chamar Claude via chave OpenRouter.
 
 Configuração:
-    export ANTHROPIC_API_KEY="sua-chave-aqui"
-    pip install anthropic
+    export OPENROUTER_API_KEY="sk-or-..."
+    pip install openai
 """
 
 import os
 import json
 from typing import Optional
-import anthropic
+from openai import OpenAI
 
 FEATURE_NAMES_PT = {
     "gender": "Gênero",
@@ -30,6 +29,9 @@ FEATURE_NAMES_PT = {
     "Avg_class_frequency_total": "Freq. média total de aulas",
     "Avg_class_frequency_current_month": "Freq. de aulas no mês atual",
 }
+
+# Modelo a usar via OpenRouter — Claude Sonnet é o melhor custo-benefício
+OPENROUTER_MODEL = "anthropic/claude-sonnet-4-5"
 
 SYSTEM_PROMPT = """Você é um consultor especializado em retenção de clientes para a Vitaliza, 
 uma plataforma de fitness digital. Você analisa dados de clientes e fornece:
@@ -59,7 +61,6 @@ def build_prompt(
         "BAIXO"
     )
 
-    # Separar fatores de risco (positivos) e proteção (negativos)
     sorted_shap = sorted(shap_values.items(), key=lambda x: abs(x[1]), reverse=True)
     risk_factors    = [(f, v) for f, v in sorted_shap if v > 0.01][:5]
     protect_factors = [(f, v) for f, v in sorted_shap if v < -0.01][:3]
@@ -99,35 +100,42 @@ def explain(
     api_key: Optional[str] = None,
 ) -> str:
     """
-    Chama o LLM e retorna a explicação + prescrição em texto.
+    Chama o LLM via OpenRouter e retorna explicação + prescrição em texto.
 
     Args:
         churn_prob:   probabilidade de churn (0.0 a 1.0)
         shap_values:  dict {feature_name: shap_value} para este cliente
         client_data:  dict {feature_name: valor_original}
-        api_key:      chave da API Anthropic (ou usa ANTHROPIC_API_KEY do env)
+        api_key:      chave OpenRouter (ou usa OPENROUTER_API_KEY do env)
 
     Returns:
         String com a resposta do LLM
     """
-    key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+    key = api_key or os.environ.get("OPENROUTER_API_KEY")
     if not key:
         raise ValueError(
             "Chave da API não encontrada. "
-            "Configure a variável de ambiente ANTHROPIC_API_KEY ou passe api_key."
+            "Configure a variável de ambiente OPENROUTER_API_KEY ou passe api_key."
         )
 
-    client = anthropic.Anthropic(api_key=key)
-    prompt = build_prompt(churn_prob, shap_values, client_data)
-
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1000,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
+    # OpenRouter usa o mesmo formato da API OpenAI
+    client = OpenAI(
+        api_key=key,
+        base_url="https://openrouter.ai/api/v1",
     )
 
-    return message.content[0].text
+    prompt = build_prompt(churn_prob, shap_values, client_data)
+
+    response = client.chat.completions.create(
+        model=OPENROUTER_MODEL,
+        max_tokens=1000,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": prompt},
+        ],
+    )
+
+    return response.choices[0].message.content
 
 
 def explain_batch(
@@ -135,17 +143,7 @@ def explain_batch(
     api_key: Optional[str] = None,
     top_n: int = 5,
 ) -> list[dict]:
-    """
-    Gera explicações para os N clientes com maior risco de churn.
-
-    Args:
-        results:  lista de dicts com churn_prob, shap_values, client_data
-        api_key:  chave da API
-        top_n:    quantos clientes explicar
-
-    Returns:
-        Lista de dicts com explanation adicionado
-    """
+    """Gera explicações para os N clientes com maior risco de churn."""
     sorted_results = sorted(results, key=lambda x: x["churn_prob"], reverse=True)
     top = sorted_results[:top_n]
 
@@ -180,6 +178,6 @@ if __name__ == "__main__":
         "Avg_additional_charges_total": 50.0,
         "Group_visits": 0,
     }
-    print("Testando llm_explainer.py...")
+    print("Testando llm_explainer.py com OpenRouter...")
     result = explain(churn_prob=0.92, shap_values=sample_shap, client_data=sample_data)
     print(result)
