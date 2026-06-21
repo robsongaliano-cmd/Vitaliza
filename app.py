@@ -520,61 +520,174 @@ elif tab_mode == "📊 Métricas do modelo":
 
     cm = metrics["confusion_matrix"]
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("ROC-AUC",  f"{metrics['roc_auc']:.3f}")
-    c2.metric("F1-Score", f"{metrics['f1']:.3f}")
-    c3.metric("Precisão", f"{metrics['precision']:.3f}")
-    c4.metric("Recall",   f"{metrics['recall']:.3f}")
+    # ── Gráfico de barras horizontais — métricas de performance ──────────────
+    section_label("PERFORMANCE · RANDOM FOREST", "Métricas de avaliação")
 
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    c5, c6, c7, c8 = st.columns(4)
-    c5.metric("Acurácia",       f"{metrics['accuracy']:.3f}")
-    c6.metric("Especificidade", f"{metrics['specificity']:.3f}")
-    c7.metric("FPR",            f"{metrics['fpr']:.3f}")
-    c8.metric("FNR",            f"{metrics['fnr']:.3f}")
+    metric_items = [
+        ("ROC-AUC",        metrics["roc_auc"],        "#1A1D23", "Discriminação geral do modelo — probabilidade de ranquear churn acima de não-churn"),
+        ("F1-Score",       metrics["f1"],             "#3B82F6", "Equilíbrio entre precisão e recall"),
+        ("Precisão (PPV)", metrics["precision"],      "#8B5CF6", "Dos clientes sinalizados, % que realmente cancelaram"),
+        ("Recall",         metrics["recall"],         "#F59E0B", "Dos que cancelaram, % que o modelo detectou"),
+        ("Acurácia",       metrics["accuracy"],       "#10B981", "Acertos totais sobre o conjunto de teste"),
+        ("Especificidade", metrics["specificity"],    "#06B6D4", "Dos que não cancelaram, % corretamente identificados"),
+        ("FPR",            metrics["fpr"],            "#EF4444", "Taxa de falsos positivos — alarmes desnecessários"),
+        ("FNR",            metrics["fnr"],            "#F97316", "Taxa de falsos negativos — churn não detectado"),
+    ]
 
-    st.caption(f"Cross-validation ROC-AUC: {metrics.get('cv_roc_auc_mean', 0):.3f} ± {metrics.get('cv_roc_auc_std', 0):.3f} · gap treino/teste = 0.032 · sem overfit confirmado")
+    # Gerar barras via st.columns — compatível com Streamlit Cloud
+    for label, value, color, descricao in metric_items:
+        pct = value * 100
+        bar_width = str(round(pct, 1)) + "%"
+        col_label, col_bar, col_val = st.columns([2, 6, 1])
 
+        col_label.markdown(
+            "<p style='font-size:12px;color:#4B5563;font-weight:500;margin:6px 0;"
+            "text-align:right;'>" + label + "</p>",
+            unsafe_allow_html=True,
+        )
+
+        bar_html = (
+            "<div style='position:relative;height:28px;display:flex;align-items:center;'>"
+            "<div style='position:absolute;left:0;right:0;height:8px;background:#F1F3F7;"
+            "border-radius:4px;'></div>"
+            "<div style='position:absolute;left:0;width:" + bar_width + ";height:8px;"
+            "background:" + color + ";border-radius:4px;opacity:0.85;'></div>"
+            "<div style='position:absolute;left:" + bar_width + ";transform:translateX(6px);"
+            "font-size:10px;color:#9CA3AF;white-space:nowrap;'>" + descricao + "</div>"
+            "</div>"
+        )
+        col_bar.markdown(bar_html, unsafe_allow_html=True)
+
+        val_color = "#EF4444" if label in ("FPR", "FNR") else "#1A1D23"
+        col_val.markdown(
+            "<p style='font-size:13px;font-weight:700;color:" + val_color + ";"
+            "text-align:right;margin:6px 0;font-family:monospace;'>"
+            + f"{value:.3f}" + "</p>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        "<p style='font-size:11px;color:#9CA3AF;margin:12px 0 0;'>"
+        "CV ROC-AUC: " + f"{metrics.get('cv_roc_auc_mean', 0):.3f}" +
+        " ± " + f"{metrics.get('cv_roc_auc_std', 0):.3f}" +
+        " · gap treino/teste = 0.032 · sem overfit confirmado</p>",
+        unsafe_allow_html=True,
+    )
+
+    # ── Matriz de confusão ────────────────────────────────────────────────────
     section_label("CONJUNTO DE TESTE · 800 CLIENTES", "Matriz de confusão")
 
-    st.markdown(f"""
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:480px;margin-bottom:24px;">
-      <div style="background:#F0FDF9;border:1px solid #A7F3D0;border-radius:10px;padding:18px;text-align:center;">
-        <p style="font-size:34px;font-weight:700;color:#059669;margin:0;line-height:1;">{cm['tn']}</p>
-        <p style="font-size:10px;color:#059669;margin:5px 0 0;font-weight:600;letter-spacing:0.07em;">VERDADEIROS NEGATIVOS</p>
-        <p style="font-size:11px;color:#6B7385;margin:3px 0 0;">Não churn · correto</p>
-      </div>
-      <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:10px;padding:18px;text-align:center;">
-        <p style="font-size:34px;font-weight:700;color:#DC2626;margin:0;line-height:1;">{cm['fp']}</p>
-        <p style="font-size:10px;color:#DC2626;margin:5px 0 0;font-weight:600;letter-spacing:0.07em;">FALSOS POSITIVOS</p>
-        <p style="font-size:11px;color:#6B7385;margin:3px 0 0;">Falso alarme</p>
-      </div>
-      <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:10px;padding:18px;text-align:center;">
-        <p style="font-size:34px;font-weight:700;color:#DC2626;margin:0;line-height:1;">{cm['fn']}</p>
-        <p style="font-size:10px;color:#DC2626;margin:5px 0 0;font-weight:600;letter-spacing:0.07em;">FALSOS NEGATIVOS</p>
-        <p style="font-size:11px;color:#6B7385;margin:3px 0 0;">Churn não detectado ⚠</p>
-      </div>
-      <div style="background:#F0FDF9;border:1px solid #A7F3D0;border-radius:10px;padding:18px;text-align:center;">
-        <p style="font-size:34px;font-weight:700;color:#059669;margin:0;line-height:1;">{cm['tp']}</p>
-        <p style="font-size:10px;color:#059669;margin:5px 0 0;font-weight:600;letter-spacing:0.07em;">VERDADEIROS POSITIVOS</p>
-        <p style="font-size:11px;color:#6B7385;margin:3px 0 0;">Churn detectado ✓</p>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    col_cm, col_info = st.columns([1, 1])
 
+    with col_cm:
+        total = cm['tn'] + cm['fp'] + cm['fn'] + cm['tp']
+        for row_label, v1, c1_val, l1, v2, c2_val, l2 in [
+            ("Real: Não churn", cm['tn'], "#059669", "TN · correto", cm['fp'], "#DC2626", "FP · falso alarme"),
+            ("Real: Churn",     cm['fn'], "#DC2626", "FN · não detectado ⚠", cm['tp'], "#059669", "TP · detectado ✓"),
+        ]:
+            r1, r2 = st.columns(2)
+            for col_obj, val, color, leg in [(r1, v1, c1_val, l1), (r2, v2, c2_val, l2)]:
+                bg = "#F0FDF9" if color == "#059669" else "#FEF2F2"
+                border = "#A7F3D0" if color == "#059669" else "#FCA5A5"
+                col_obj.markdown(
+                    "<div style='background:" + bg + ";border:1px solid " + border + ";"
+                    "border-radius:10px;padding:16px;text-align:center;margin-bottom:8px;'>"
+                    "<p style='font-size:30px;font-weight:700;color:" + color + ";margin:0;line-height:1;'>"
+                    + str(val) + "</p>"
+                    "<p style='font-size:10px;color:" + color + ";margin:4px 0 0;font-weight:600;"
+                    "letter-spacing:0.06em;'>" + leg + "</p>"
+                    "<p style='font-size:11px;color:#6B7385;margin:2px 0 0;'>"
+                    + f"{val/total:.1%} do total" + "</p>"
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+
+    with col_info:
+        st.markdown(
+            "<div style='background:#F8F9FB;border:1px solid #E8ECF0;border-radius:12px;"
+            "padding:20px 22px;margin-top:0;'>"
+            "<p style='font-size:11px;color:#9CA3AF;font-weight:600;letter-spacing:0.08em;"
+            "text-transform:uppercase;margin:0 0 14px;'>Interpretação de negócio</p>"
+            "<div style='margin-bottom:12px;'>"
+            "<p style='font-size:12px;font-weight:600;color:#059669;margin:0 0 2px;'>TN = " + str(cm['tn']) + " · Não churn · Correto</p>"
+            "<p style='font-size:12px;color:#6B7385;margin:0;'>Cliente seguro identificado corretamente — sem custo de intervenção.</p>"
+            "</div>"
+            "<div style='margin-bottom:12px;'>"
+            "<p style='font-size:12px;font-weight:600;color:#DC2626;margin:0 0 2px;'>FP = " + str(cm['fp']) + " · Falso alarme</p>"
+            "<p style='font-size:12px;color:#6B7385;margin:0;'>Oferta de retenção enviada desnecessariamente — custo baixo e aceitável.</p>"
+            "</div>"
+            "<div style='margin-bottom:12px;'>"
+            "<p style='font-size:12px;font-weight:600;color:#DC2626;margin:0 0 2px;'>FN = " + str(cm['fn']) + " · Churn não detectado ⚠</p>"
+            "<p style='font-size:12px;color:#6B7385;margin:0;'>Cliente em churn real que passou despercebido — risco principal para a Vitaliza.</p>"
+            "</div>"
+            "<div>"
+            "<p style='font-size:12px;font-weight:600;color:#059669;margin:0 0 2px;'>TP = " + str(cm['tp']) + " · Churn detectado ✓</p>"
+            "<p style='font-size:12px;color:#6B7385;margin:0;'>Cliente em risco identificado — candidato direto ao briefing de retenção.</p>"
+            "</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ── SHAP — gráfico de barras horizontais ──────────────────────────────────
     section_label("SHAP · FEATURE IMPORTANCE", "Importância das variáveis")
 
     shap_data = metrics.get("shap_mean_abs", {})
     fi_data   = metrics.get("feature_importances", {})
 
     if shap_data:
-        shap_df = pd.DataFrame([
-            {
-                "Variável": FEATURE_NAMES_PT.get(f, f),
-                "SHAP (média abs.)": round(v, 4),
-                "Feature Importance": round(fi_data.get(f, 0), 4),
-            }
-            for f, v in shap_data.items()
-        ]).sort_values("SHAP (média abs.)", ascending=False).reset_index(drop=True)
+        items_shap = sorted(shap_data.items(), key=lambda x: x[1], reverse=True)
+        max_shap   = items_shap[0][1] if items_shap else 1
 
-        st.dataframe(shap_df, use_container_width=True, hide_index=True)
+        header_s = st.columns([3, 4, 2, 1])
+        header_s[0].markdown("<p style='font-size:10px;color:#9CA3AF;letter-spacing:0.07em;text-transform:uppercase;margin:0;text-align:right;'>Variável</p>", unsafe_allow_html=True)
+        header_s[1].markdown("<p style='font-size:10px;color:#9CA3AF;letter-spacing:0.07em;text-transform:uppercase;margin:0;'>SHAP (impacto médio)</p>", unsafe_allow_html=True)
+        header_s[2].markdown("<p style='font-size:10px;color:#9CA3AF;letter-spacing:0.07em;text-transform:uppercase;margin:0;'>Feature Importance</p>", unsafe_allow_html=True)
+        header_s[3].markdown("<p style='font-size:10px;color:#9CA3AF;letter-spacing:0.07em;text-transform:uppercase;margin:0;text-align:right;'>SHAP</p>", unsafe_allow_html=True)
+        st.markdown("<hr style='border:none;border-top:1px solid #F1F3F7;margin:4px 0 6px;'>", unsafe_allow_html=True)
+
+        for feat, shap_val in items_shap:
+            nome    = FEATURE_NAMES_PT.get(feat, feat)
+            fi_val  = fi_data.get(feat, 0)
+            sw      = str(round(shap_val / max_shap * 100, 1)) + "%"
+            fw      = str(round(fi_val / max(fi_data.values()) * 100, 1)) + "%"
+
+            cs, cb1, cb2, cv = st.columns([3, 4, 2, 1])
+            cs.markdown(
+                "<p style='font-size:12px;color:#4B5563;text-align:right;margin:5px 0;"
+                "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>" + nome + "</p>",
+                unsafe_allow_html=True,
+            )
+            cb1.markdown(
+                "<div style='position:relative;height:24px;display:flex;align-items:center;'>"
+                "<div style='position:absolute;left:0;right:0;height:7px;background:#F1F3F7;border-radius:4px;'></div>"
+                "<div style='position:absolute;left:0;width:" + sw + ";height:7px;"
+                "background:#1A1D23;border-radius:4px;opacity:0.85;'></div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            cb2.markdown(
+                "<div style='position:relative;height:24px;display:flex;align-items:center;'>"
+                "<div style='position:absolute;left:0;right:0;height:7px;background:#F1F3F7;border-radius:4px;'></div>"
+                "<div style='position:absolute;left:0;width:" + fw + ";height:7px;"
+                "background:#9CA3AF;border-radius:4px;opacity:0.7;'></div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            cv.markdown(
+                "<p style='font-size:12px;font-weight:600;color:#1A1D23;"
+                "font-family:monospace;text-align:right;margin:5px 0;'>"
+                + f"{shap_val:.4f}" + "</p>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(
+            "<div style='display:flex;gap:20px;margin-top:10px;'>"
+            "<span style='display:flex;align-items:center;gap:6px;font-size:11px;color:#6B7385;'>"
+            "<span style='width:12px;height:7px;background:#1A1D23;border-radius:2px;display:inline-block;opacity:0.85;'></span>"
+            "SHAP (impacto causal)</span>"
+            "<span style='display:flex;align-items:center;gap:6px;font-size:11px;color:#6B7385;'>"
+            "<span style='width:12px;height:7px;background:#9CA3AF;border-radius:2px;display:inline-block;opacity:0.7;'></span>"
+            "Feature Importance (impureza)</span>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
