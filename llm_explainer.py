@@ -32,7 +32,7 @@ FEATURE_NAMES_PT = {
 }
 
 # Modelo a usar via OpenRouter — Claude Sonnet é o melhor custo-benefício
-OPENROUTER_MODEL = "anthropic/claude-sonnet-4-5"
+OPENROUTER_MODEL = "anthropic/claude-3-haiku"
 
 SYSTEM_PROMPT = """Você é um consultor especializado em retenção de clientes para a Vitaliza, 
 uma plataforma de fitness digital. Você analisa dados de clientes e fornece:
