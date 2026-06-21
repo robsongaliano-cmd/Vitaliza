@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 llm_explainer.py — Explicabilidade e análise prescritiva via LLM
 Vitaliza | Artefato 2 — Módulo 2 Inteli MBA IA & Dados

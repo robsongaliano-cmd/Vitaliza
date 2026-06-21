@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 train.py — Pipeline de treinamento do modelo de churn
 Vitaliza | Artefato 2 — Módulo 2 Inteli MBA IA & Dados
