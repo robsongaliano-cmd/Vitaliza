@@ -320,6 +320,6 @@ elif tab_mode == "Métricas do modelo":
         ]).sort_values("SHAP (média abs.)", ascending=False)
 
         st.dataframe(
-            shap_df.style.background_gradient(subset=["SHAP (média abs.)"], cmap="Greens"),
+            shap_df,
             use_container_width=True, hide_index=True,
         )
