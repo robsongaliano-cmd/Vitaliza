@@ -14,7 +14,7 @@ import pandas as pd
 import shap
 import streamlit as st
 
-from llm_explainer import FEATURE_NAMES_PT, explain
+from llm_explainer import FEATURE_NAMES_PT, explain, get_segment, SEGMENTS
 
 # ── Página ────────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -390,6 +390,63 @@ if tab_mode == "🔍 Análise individual":
         c2.metric("Tempo de plataforma", f"{lifetime} meses")
         c3.metric("Frequência atual", f"{freq_current:.1f} aulas/sem")
         c4.metric("Tipo de contrato", f"{contract} mês" if contract == 1 else f"{contract} meses")
+
+        # Segmento alinhado com Board Recommendation Deck
+        seg_nome = get_segment(client_data, shap_dict, churn_prob)
+        seg_meta = SEGMENTS.get(seg_nome, {})
+        seg_cores = {
+            "Early Dropper":      ("#DC2626", "#FEF2F2"),
+            "Disengaged":         ("#DC2626", "#FEF2F2"),
+            "Monthly at Risk":    ("#D97706", "#FFFBEB"),
+            "Loyal Emerging":     ("#2B58E0", "#EEF2FD"),
+            "Loyal Engaged":      ("#059669", "#F0FDF9"),
+            "Socially Protected": ("#059669", "#F0FDF9"),
+            "Sleeping Dog":       ("#6B7280", "#F9FAFB"),
+            "Em Risco Moderado":  ("#D97706", "#FFFBEB"),
+        }
+        sc, sb = seg_cores.get(seg_nome, ("#6B7280", "#F9FAFB"))
+        nao_intervir = seg_meta.get("nao_intervir", False)
+        score_int = int(churn_prob * 100)
+        acima = score_int >= 70
+
+        seg_html = (
+            "<div style='display:flex;align-items:center;gap:12px;margin:10px 0 4px;'>"
+            "<div style='background:" + sb + ";border:1px solid " + sc + "40;border-radius:8px;"
+            "padding:8px 16px;display:inline-flex;align-items:center;gap:8px;'>"
+            "<span style='font-size:10px;font-weight:600;color:" + sc + ";letter-spacing:0.06em;'>SEGMENTO</span>"
+            "<span style='font-size:14px;font-weight:700;color:" + sc + ";'>" + seg_nome + "</span>"
+            "</div>"
+            "<span style='font-size:11px;color:#9CA3AF;'>" + seg_meta.get("ltv_cac", "") + "</span>"
+            "</div>"
+            "<p style='font-size:11px;color:#9CA3AF;margin:0 0 8px;'>"
+            + seg_meta.get("hipotese", "") + " &nbsp;·&nbsp; " + seg_meta.get("driver", "")
+            + "</p>"
+        )
+        if nao_intervir:
+            seg_html += (
+                "<div style='background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;"
+                "padding:10px 14px;margin-bottom:8px;'>"
+                "<p style='font-size:12px;font-weight:600;color:#DC2626;margin:0;'>🚫 SLEEPING DOG — NÃO INTERVIR</p>"
+                "<p style='font-size:11px;color:#6B7280;margin:4px 0 0;'>Ativo por inércia. Qualquer mensagem pode acelerar o cancelamento. Excluir de todas as campanhas.</p>"
+                "</div>"
+            )
+        st.markdown(seg_html, unsafe_allow_html=True)
+
+        # Nota de trade-off para o operador de CS
+        cor_thresh = "#059669" if acima else "#D97706"
+        msg_thresh = "acima do threshold — intervenção recomendada" if acima else "abaixo do threshold — monitorar"
+        nota_modelo = seg_meta.get("modelo_nota", "")
+        trade_html = (
+            "<div style='background:#F8F9FB;border:1px solid #E8ECF0;border-radius:8px;"
+            "padding:10px 14px;margin-bottom:12px;'>"
+            "<p style='font-size:10px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;"
+            "text-transform:uppercase;margin:0 0 4px;'>NOTA DO MODELO · TRADE-OFF PARA O OPERADOR DE CS</p>"
+            "<p style='font-size:12px;color:#4B5563;margin:0;'>Score <strong style=\'color:" + cor_thresh + ";\'>"+str(score_int)+"/100</strong> — "
+            "<span style=\'color:" + cor_thresh + ";\'>"+msg_thresh+"</span> (threshold 70 · Recall 86% · Precisão 89%)</p>"
+            "<p style='font-size:11px;color:#6B7385;margin:6px 0 0;'>" + nota_modelo + "</p>"
+            "</div>"
+        )
+        st.markdown(trade_html, unsafe_allow_html=True)
 
         section_label("SHAP VALUES", "Fatores que influenciam o risco")
         shap_bars(shap_dict)
